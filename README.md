@@ -19,3 +19,9 @@ sudo ipa-getcert request -N ${service} -K HTTP/${service} \
   -D ${service} \
   -C "/usr/local/catcerts.sh /etc/pki/tls/certs/${service}.crt /etc/ipa/ca.crt /etc/pki/tls/certs/${service}.pem"
 ```
+
+## Installation
+
+Copy `catcerts.sh` to `/usr/local/bin/`, or create it there and make it executable:
+
+`sudo chmod +x /usr/local/bin/catcerts.sh`
