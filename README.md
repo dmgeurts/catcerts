@@ -8,7 +8,7 @@ sudo ipa-getcert request -K HTTP/$(hostname) \
   -k /etc/pki/tls/private/$(hostname).key \
   -f /etc/pki/tls/certs/$(hostname).crt \
   -D $(hostname) \
-  -C "/usr/local/catcerts.sh /etc/pki/tls/certs/$(hostname).crt /etc/ipa/ca.crt /etc/pki/tls/certs/$(hostname).pem"
+  -C "/usr/local/bin/catcerts.sh /etc/pki/tls/certs/$(hostname).crt /etc/ipa/ca.crt /etc/pki/tls/certs/$(hostname).pem"
 ```
 
 ```
@@ -17,7 +17,7 @@ sudo ipa-getcert request -N ${service} -K HTTP/${service} \
   -k /etc/ssl/private/${service}.key \
   -f /etc/ssl/certs/${service}.crt \
   -D ${service} \
-  -C "/usr/local/catcerts.sh /etc/pki/tls/certs/${service}.crt /etc/ipa/ca.crt /etc/pki/tls/certs/${service}.pem"
+  -C "/usr/local/bin/catcerts.sh /etc/pki/tls/certs/${service}.crt /etc/ipa/ca.crt /etc/pki/tls/certs/${service}.pem"
 ```
 
 ## Installation
