@@ -6,3 +6,4 @@ chain="$2"
 target="$3"
 
 cat "$cert" "$chain" > "$target"
+chmod 600 "$target"
