@@ -1,19 +1,24 @@
 #!/bin/bash
 # concatenate a server cert and the chain (or root cert) into a single file
 
+## System defaults
+# Ubuntu:
+DEF_KEY_PATH="/etc/ssl/private"
+DEF_CRT_PATH="/etc/ssl/certs"
+
 ## Usage info
 show_help() {
 cat << EOF
-Usage: ${0##*/} [-h] -k KEY -c CHAIN [-o PEM] <certificate>
+Usage: ${0##*/} [-h] ((-K | -k KEY) &| -c CHAIN) [-o PEM] <certificate>
 This script concatenates a certificate with root, intermediate and/or key.
 Either a Key or Chain file must be provided.
 
-    -k KEY      Certificate key file.
-    -c CHAIN    Chain or root certificate file.
-    -o PEM      Output pem path or file(path). Defaults to:
-                Chain: <certificate>.full.pem
-                KEY: <certificate>.pem
-    -h          Display this help and exit.
+    <certificate>   If no path is given, $DEF_CRT_PATH will be assumed. 
+    -K | -k KEY     Certificate key file.
+                    -K assumes: $DEF_KEY_PATH/<certificate>.key
+    -c CHAIN        Chain or root certificate file.
+    -o PEM          Output pem path or file(path).
+    -h              Display this help and exit.
 EOF
 }
 
@@ -21,8 +26,10 @@ EOF
 OPTIND=1
 
 ## Read/interpret optional arguments
-while getopts k:c:0:h opt; do
+while getopts Kk:c:o:h opt; do
     case $opt in
+        K)  KEY="yes"
+            ;;
         k)  KEY=$OPTARG
             ;;
         c)  CHAIN=$OPTARG
@@ -48,19 +55,36 @@ if [ -z "$@" ]; then
     show_help >&2
     exit 1
 else
-    if [ ! -f "$@" ]; then
-        echo "ERROR: Certificate not found: $@"
+    CRT="$@"
+    if [[ "$(dirname "$CRT")" == "." ]]; then
+        CRT="$DEF_CRT_PATH/$CRT"
+    fi
+    if [ ! -f "$CRT" ]; then
+        echo "ERROR: Certificate not found: $CRT"
         exit 2
     elif [ -n "$KEY" ] || [ -n "$CHAIN" ]; then
-        if [ -n "$KEY" ] && [ ! -f "$KEY" ]; then
-            echo "ERROR: Key not found: $KEY"
-            exit 2
+        if [[ "$KEY" == "yes" ]]; then
+            # -K parsed
+            KEY="$DEF_KEY_PATH/$(basename "${CRT%.*}").key"
+        elif [ -n "$KEY" ] && [[ "$(dirname "$KEY")" == "." ]]; then
+            # -k with filename parsed
+            KEY="$DEF_KEY_PATH/$KEY"
         fi
-        if [ -n "$CHAIN" ] && [ ! -f "$CHAIN" ]; then
-            echo "ERROR: Chain not found: $CHAIN"
-            exit 2
+        if [ -n "$KEY" ]; then
+            # -k with filename and path parsed, or constructed above
+            if [ ! -f "$KEY" ]; then
+                echo "ERROR: Key not found: $KEY"
+                exit 2
+            fi
+            echo "Using key: $KEY"
         fi
-        CRT="$@"
+        if [ -n "$CHAIN" ]; then
+            if [ ! -f "$CHAIN" ]; then
+                echo "ERROR: Chain not found: $CHAIN"
+                exit 2
+            fi
+            echo "Using chain file: $CHAIN"
+        fi
     else
         echo "ERROR: Either a key or chain file must be parsed, found neither."
         exit 1
@@ -81,7 +105,7 @@ if [ -n "$PEM" ]; then
     fi
 else
     # Use CRT file to make up PEM filename & path
-    PEM_OUT="$(dirname "$CRT")/$(basename -s "${CRT%.*}")"
+    PEM_OUT="$(dirname "$CRT")/$(basename "${CRT%.*}")"
 fi
 
 # Test if the CRT file has a pem extension that will conflict with output
@@ -91,7 +115,8 @@ if [[ "$CRT" == "${PEM_OUT}.pem" ]]; then
     exit 1
 else
     # Concatenate the files
-    $PEM_OUT="${PEM_OUT}.pem"
+    PEM_OUT="${PEM_OUT}.pem"
+    [ -f "$PEM_OUT" ] && mv "$PEM_OUT" "${PEM_OUT}.old"
     touch "$PEM_OUT"
     [ -f "$KEY" ] && cat "$KEY" >> "$PEM_OUT"
     [ -f "$CRT" ] && cat "$CRT" >> "$PEM_OUT"
@@ -105,5 +130,9 @@ if [ -s "$PEM_OUT" ]; then
 else
     rm "$PEM_OUT"
     echo "FAILED: The output was empty. Removed file: $PEM_OUT"
+    if [ -f "${PEM_OUT}.old" ]; then
+        mv "${PEM_OUT}.old" "$PEM_OUT"
+        echo "### Reinstated the old pem file"
+    fi
 fi
 echo "DONE: Concatenated file: $PEM_OUT"
