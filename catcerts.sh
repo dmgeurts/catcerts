@@ -92,13 +92,13 @@ else
 fi
 
 # Build pem path and filename
-if [ -n "$PEM" ]; then
+if [[ $PEM ]]; then
     if [ -d "$PEM" ]; then
         # Output path was provided
-        PEM_OUT="$PEM/$(basename "${CRT%.*}")"
+        PEM_OUT="$PEM/$(basename ${CRT%.*})"
     elif [ -d "$(dirname "$PEM")" ]; then
         # Output file was provided
-        PEM_OUT="$PEM"
+        PEM_OUT="${PEM%.*}"
     else
         echo "ERROR: Path does not exist: $PEM"
         exit 2
